@@ -1,4 +1,15 @@
+# Arquivos de sistema do R
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+
+# Arquivos brutos pesados (mantém apenas os .rds gerados)
+DADOS/distritos_sao_paulo/
+DADOS/*.xlsx
+DADOS/*.csv
+DADOS/*.shp
+DADOS/*.shx
+DADOS/*.dbf
+DADOS/*.prj
+DADOS/*.cpg
