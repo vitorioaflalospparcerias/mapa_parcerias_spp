@@ -1,37 +1,3 @@
-# ===================================================================================
-# OBJETIVO PRINCIPAL: MÓDULO DO MAPA
-# ===================================================================================
-#
-# Este módulo é responsável por toda a interatividade do mapa Leaflet.
-#
-# 1. mapaUI: Simplesmente cria o contêiner `leafletOutput` que ocupará
-#    100% do espaço da coluna central.
-#
-# 2. mapaServer: Contém a lógica principal do mapa.
-#    - `renderLeaflet`: Renderiza o mapa base uma única vez, com os polígonos
-#      de todos os distritos.
-#    - `observe`: Observa o dataframe `projetos_reativos`. Sempre que os filtros
-#      mudam, este observador é acionado, limpando os marcadores antigos
-#      e adicionando os novos marcadores (pontos dos projetos) usando a função
-#      `leafletProxy` para alta performance.
-#    - `observeEvent` (para projeto_selecionado): Controla a lógica de zoom
-#      quando uma parceria específica é selecionada no filtro. Usa `flyTo` para
-#      uma animação suave até o ponto do projeto.
-#    - `observeEvent` (para distrito_selecionado): Controla a lógica de zoom
-#      quando um distrito é selecionado. Usa `flyToBounds` para ajustar a visão
-#      aos limites do polígono do distrito. A lógica dá prioridade ao zoom
-#      do projeto.
-#
-# ===================================================================================
-
-
-# --- CARREGAMENTO DE BIBLIOTECAS ---
-library(shiny)
-library(leaflet)
-library(sf)
-library(dplyr)
-library(htmltools)
-
 # --- UI DO MÓDULO ---
 mapaUI <- function(id) {
   ns <- NS(id)
@@ -41,91 +7,209 @@ mapaUI <- function(id) {
 }
 
 # --- SERVER DO MÓDULO ---
-mapaServer <- function(id, projetos_reativos, distritos_estaticos, distrito_selecionado, projeto_selecionado) {
+mapaServer <- function(id, projetos_reativos, distritos_estaticos, distrito_selecionado, projeto_selecionado, lote_selecionado, distritos_sem_equip_estaticos, exibir_pins, categorizar_cor, reset_trigger) {
   moduleServer(id, function(input, output, session) {
     
-    # RENDERIZA O MAPA BASE
+    zoom_ja_feito <- reactiveVal(FALSE)
+    
+    # --- MAPA BASE ---
     output$mapa_distritos <- renderLeaflet({
-      leaflet() |>
+      
+      leaflet(options = leafletOptions(zoomControl = FALSE)) |>
         addTiles() |>
         addPolygons(
           data = distritos_estaticos,
-          fillColor = "lightblue",
-          color = "black",
-          weight = 1,
-          opacity = 1,
+          fillColor = "#FFE5B4",
+          color = "black", 
+          weight = 1, 
+          opacity = 1, 
           fillOpacity = 0.5,
-          label = ~NM_DIST,
+          label = ~NM_DIST, 
           layerId = ~NM_DIST
-        )
+        ) |>
+        addPolygons(
+          data = distritos_sem_equip_estaticos,
+          fillColor = "#EAEAEA",
+          color = "black", 
+          weight = 1, 
+          opacity = 1, 
+          fillOpacity = 0.7,
+          label = ~paste(NM_DIST, "(sem equipamentos)")
+        ) |>
+        addLegend(
+          position = "bottomright",
+          colors = c("#FFE5B4", "#EAEAEA"), 
+          labels = c("Distrito com equipamento(s)", "Distrito sem equipamentos"),
+          title = "Legenda de Distritos"
+        ) |>
+        onRender("function(el, x) {
+          L.control.zoom({position: 'bottomright'}).addTo(this);
+        }")
     })
     
-    # OBSERVADOR PARA ATUALIZAR OS PROJETOS
+    # --- LÓGICA DE DESENHO DOS PINS ---
     observe({
-      dados_para_plotar <- projetos_reativos()
-      icon_pin <- awesomeIcons(
-        icon = 'info-sign',
-        library = 'glyphicon',
-        markerColor = 'red',
-        iconColor = '#FFFFFF'
-      )
+      proxy <- leafletProxy("mapa_distritos")
       
-      leafletProxy("mapa_distritos", data = dados_para_plotar) |>
-        clearGroup("projetos") |>
-        addAwesomeMarkers(
-          data = dados_para_plotar,
-          icon = icon_pin,
-          label = ~lapply(label_html, HTML),
-          labelOptions = labelOptions(direction = "auto", textsize = "13px"),
-          group = "projetos"
+      # Limpa os grupos antigos E os clusters antes de desenhar novos
+      proxy |> clearGroup("projetos") |> clearMarkerClusters() |> removeControl("legenda_pins_dinamica")
+      req(isTRUE(exibir_pins()))
+      
+      dados_para_plotar <- projetos_reativos()
+      req(nrow(dados_para_plotar) > 0)
+      
+      categoria_selecionada <- categorizar_cor()
+      
+      if (categoria_selecionada == "nenhum") {
+        proxy |>
+          addAwesomeMarkers(
+            data = dados_para_plotar,
+            group = "projetos",
+            clusterOptions = markerClusterOptions(),
+            popup = ~lapply(label_html, HTML), 
+            icon = awesomeIcons(
+              icon = 'info-sign', 
+              library = 'glyphicon', 
+              markerColor = 'orange', 
+              iconColor = '#FFFFFF'
+            )
+          )
+        
+      } else {
+        coluna_para_cor <- switch(
+          categoria_selecionada,
+          "modalidade" = "ppp_modali",
+          "zona" = "zona",
+          "concedente" = "ppp_conced"
         )
+        
+        dados_filtrados <- dados_para_plotar |> filter(!is.na(.data[[coluna_para_cor]]))
+        
+        if (nrow(dados_filtrados) > 0) {
+          
+          categorias_unicas <- sort(unique(dados_filtrados[[coluna_para_cor]]))
+          
+          # Paleta de cores
+          cores_validas <- c('orange', 'darkblue', 'cadetblue', 'darkred', 'purple', 'green', 'lightred', 'lightblue', 'darkgreen', 'pink', 'beige', 'gray')
+          
+          cores_hex <- c(
+            'orange' = '#F08200',      
+            'darkblue' = '#023047',    
+            'cadetblue' = '#436978',   
+            'darkred' = '#A23336',     
+            'purple' = '#8E44AD',      
+            'green' = '#27AE60',       
+            'lightred' = '#E74C3C',    
+            'lightblue' = '#3498DB',   
+            'darkgreen' = '#1E8449',   
+            'pink' = '#D252B9',        
+            'beige' = '#F39C12',       
+            'gray' = '#7F8C8D'         
+          )
+          
+          mapa_nomes <- setNames(rep_len(cores_validas, length.out = length(categorias_unicas)), categorias_unicas)
+          mapa_hex <- setNames(cores_hex[mapa_nomes], categorias_unicas)
+          
+          # <-- SOLUÇÃO 2: Vetorização (Eliminação do Loop 'for')
+          # Cria um vetor com a cor exata para cada linha do dataframe de uma só vez
+          vetor_cores_marcadores <- unname(mapa_nomes[as.character(dados_filtrados[[coluna_para_cor]])])
+          
+          proxy |>
+            addAwesomeMarkers(
+              data = dados_filtrados,
+              group = "projetos",
+              clusterOptions = markerClusterOptions(), # <-- SOLUÇÃO 3: Clusterização ativada
+              popup = ~lapply(label_html, HTML), 
+              icon = awesomeIcons(
+                icon = 'info-sign',
+                library = 'glyphicon',
+                markerColor = vetor_cores_marcadores, # Aplica todas as cores instantaneamente
+                iconColor = '#FFFFFF'
+              )
+            ) |>
+            addLegend(
+              position = "bottomleft",
+              colors = unname(mapa_hex),
+              labels = names(mapa_hex),
+              title = switch(categoria_selecionada,
+                             "modalidade" = "Modalidade",
+                             "zona" = "Zona",
+                             "concedente" = "Poder Concedente"),
+              layerId = "legenda_pins_dinamica"
+            )
+        }
+      }
     })
     
-    # OBSERVADOR PARA ZOOM NA PARCERIA (CORRIGIDO)
+    # --- LÓGICA DE ZOOM ---
+    zoom_out_mapa <- function(proxy) {
+      bbox <- st_bbox(distritos_estaticos) %>% as.vector()
+      proxy %>% flyToBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
+      zoom_ja_feito(TRUE) 
+    }
+    
+    observeEvent(reset_trigger(), {
+      req(reset_trigger() > 0)
+      mapa_proxy <- leafletProxy("mapa_distritos")
+      zoom_out_mapa(mapa_proxy)
+      zoom_ja_feito(FALSE)
+    }, ignoreInit = TRUE)
+    
     observeEvent(projeto_selecionado(), {
-      nome_projeto <- projeto_selecionado()
+      selecionados <- projeto_selecionado()
+      if ("Todos" %in% selecionados) { zoom_ja_feito(FALSE); return() }
+      
       mapa_proxy <- leafletProxy("mapa_distritos")
       
-      if (nome_projeto != "Todos") {
-        projeto_zoom <- projetos_reativos() %>%
-          filter(ppp_nome == nome_projeto)
-        
+      if (length(selecionados) == 1 && !zoom_ja_feito()) {
+        projeto_zoom <- projetos_reativos() %>% filter(ppp_nome == selecionados)
         if (nrow(projeto_zoom) > 0) {
           coords <- sf::st_coordinates(projeto_zoom)
-          mapa_proxy %>%
-            flyTo(lng = coords[1], lat = coords[2], zoom = 17)
+          mapa_proxy %>% flyTo(lng = coords[1], lat = coords[2], zoom = 17)
+          zoom_ja_feito(TRUE)
         }
-      } else {
-        # Se o filtro de parceria foi limpo, verifica se deve fazer zoom-out
-        if (distrito_selecionado() == "Todos") {
-          bbox <- st_bbox(distritos_estaticos) %>% as.vector()
-          mapa_proxy %>%
-            flyToBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
-        }
-      }
-    })
+      } else if (length(selecionados) > 1) { zoom_out_mapa(mapa_proxy) }
+    }, ignoreInit = TRUE)
     
-    # OBSERVADOR PARA O ZOOM NO DISTRITO
-    observeEvent(distrito_selecionado(), {
-      req(projeto_selecionado() == "Todos")
+    observeEvent(lote_selecionado(), {
+      if (length(projeto_selecionado()) > 1 || !"Todos" %in% projeto_selecionado()) { return() }
+      selecionados_lote <- lote_selecionado()
+      if ("Todos" %in% selecionados_lote) { zoom_ja_feito(FALSE); return() }
       
-      nome_distrito <- distrito_selecionado()
       mapa_proxy <- leafletProxy("mapa_distritos")
       
-      if (nome_distrito == "Todos") {
-        bbox <- st_bbox(distritos_estaticos) %>% as.vector()
-        mapa_proxy %>%
-          flyToBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
-      } else {
-        distrito_zoom <- distritos_estaticos %>%
-          filter(NM_DIST == nome_distrito)
-        
+      if (length(selecionados_lote) == 1 && !zoom_ja_feito()) {
+        dados_do_lote <- projetos_reativos()
+        if (nrow(dados_do_lote) > 0) {
+          n_equip <- nrow(dados_do_lote)
+          if(n_equip == 1) {
+            coords <- sf::st_coordinates(dados_do_lote)
+            mapa_proxy %>% flyTo(lng = coords[1], lat = coords[2], zoom = 17)
+          } else {
+            bbox <- st_bbox(dados_do_lote) %>% as.vector()
+            mapa_proxy %>% flyToBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
+          }
+          zoom_ja_feito(TRUE)
+        }
+      } else if (length(selecionados_lote) > 1) { zoom_out_mapa(mapa_proxy) }
+    }, ignoreInit = TRUE)
+    
+    observeEvent(distrito_selecionado(), {
+      if ( (length(projeto_selecionado()) > 1 || !"Todos" %in% projeto_selecionado()) || (length(lote_selecionado()) > 1 || !"Todos" %in% lote_selecionado()) ) { return() }
+      selecionados <- distrito_selecionado()
+      if ("Todos" %in% selecionados) { zoom_ja_feito(FALSE); return() }
+      
+      mapa_proxy <- leafletProxy("mapa_distritos")
+      
+      if (length(selecionados) == 1 && !zoom_ja_feito()) {
+        distrito_zoom <- distritos_estaticos %>% filter(NM_DIST == selecionados)
         if (nrow(distrito_zoom) > 0) {
           bbox <- st_bbox(distrito_zoom) %>% as.vector()
-          mapa_proxy %>%
-            flyToBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
+          mapa_proxy %>% flyToBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4])
+          zoom_ja_feito(TRUE)
         }
-      }
-    })
+      } else if (length(selecionados) > 1) { zoom_out_mapa(mapa_proxy) }
+    }, ignoreInit = TRUE)
+    
   })
 }
