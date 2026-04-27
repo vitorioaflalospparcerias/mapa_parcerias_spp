@@ -9,13 +9,15 @@ var keepAlive = setInterval(function() {
 $(document).ready(function() {
   const panelRight = document.getElementById('painel_wrapper_right');
   const wsBtn = document.getElementById('btn_fullscreen');
+  const expBtn = document.getElementById('btn_expand');
   
   function updateWsBtn() {
+    let rightPos = '65px';
     if ($(panelRight).is(':visible')) {
-      wsBtn.style.right = ($(panelRight).outerWidth() + 25) + 'px';
-    } else {
-      wsBtn.style.right = '65px'; 
+      rightPos = ($(panelRight).outerWidth() + 25) + 'px';
     }
+    if (wsBtn) wsBtn.style.right = rightPos;
+    if (expBtn) expBtn.style.right = rightPos;
   }
   
   const resizeObserver = new ResizeObserver(updateWsBtn);

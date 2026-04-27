@@ -1,12 +1,47 @@
 # ===================================================================================
-# OBJETIVO PRINCIPAL: LÓGICA DO SERVIDOR DO APLICATIVO SHINY
+# LÓGICA DO SERVIDOR DO APLICATIVO SHINY
 # ===================================================================================
 
 server <- function(input, output, session) {
   
-  # =================================================================================
-  # --- LOGICA DE ABERTURA DOS MENUS FLUTUANTES ---
-  # =================================================================================
+  observeEvent(input$btn_fullscreen, {
+    url <- "?fullscreen=1"
+    
+    add_param <- function(u, p, v) {
+      if (!is.null(v) && !("Todos" %in% v)) {
+        v_enc <- URLencode(paste(v, collapse = "||"), reserved = TRUE)
+        return(paste0(u, "&", p, "=", v_enc))
+      }
+      return(u)
+    }
+    
+    url <- add_param(url, "zona", input[["filtros_app-filtro_zona"]])
+    url <- add_param(url, "distrito", input[["filtros_app-filtro_distrito"]])
+    url <- add_param(url, "lote", input[["filtros_app-filtro_lote"]])
+    url <- add_param(url, "nome", input[["filtros_app-filtro_nome"]])
+    url <- add_param(url, "modalidade", input[["filtros_app-filtro_modalidade"]])
+    url <- add_param(url, "concedente", input[["filtros_app-filtro_concedente"]])
+    
+    url <- paste0(url, "&cor=", input[["filtros_app-radio_cor_pin"]])
+    url <- paste0(url, "&pins=", as.character(input[["filtros_app-check_exibir_pins"]]))
+    
+    shinyjs::runjs(paste0("window.open('", url, "', '_blank');"))
+  })
+  
+  observeEvent(input$btn_expand, {
+    shinyjs::toggleClass(selector = "body", class = "widescreen-mode")
+    
+    shinyjs::runjs("
+      var icon = $('#btn_expand i');
+      if(icon.hasClass('fa-expand')) {
+        icon.removeClass('fa-expand').addClass('fa-compress');
+        $('#btn_expand').attr('title', 'Restaurar layout original');
+      } else {
+        icon.removeClass('fa-compress').addClass('fa-expand');
+        $('#btn_expand').attr('title', 'Tela cheia: Oculta os painéis e o cabeçalho para focar apenas no mapa');
+      }
+    ")
+  })
   
   observeEvent(input$btn_open_filtros, {
     shinyjs::hide("floating_triggers")
@@ -40,36 +75,6 @@ server <- function(input, output, session) {
   observeEvent(input[["graficos_main-btn_close_graficos"]], {
     shinyjs::hide("painel_wrapper_right")     
     shinyjs::show("floating_triggers_right")  
-  })
-  
-  # =================================================================================
-  # --- LOGICA DO WIDESCREEN ---
-  # =================================================================================
-  observeEvent(input$btn_fullscreen, {
-    shinyjs::toggleClass(selector = "body", class = "widescreen-mode")
-    
-    shinyjs::runjs("
-      var btnIcon = $('#btn_fullscreen i');
-      var isWide = $('body').hasClass('widescreen-mode');
-      
-      if(isWide) {
-        btnIcon.removeClass('fa-expand').addClass('fa-times');
-        $('#painel_wrapper').hide();
-        $('#floating_triggers').hide();
-        $('#painel_wrapper_right').hide();
-        $('#floating_triggers_right').hide();
-        
-        // Retorna botão para a ponta
-        $('#btn_fullscreen').css('right', '15px');
-      } else {
-        btnIcon.removeClass('fa-times').addClass('fa-expand');
-        $('#floating_triggers').show();
-        $('#floating_triggers_right').show();
-        $('#btn_fullscreen').css('right', '65px');
-      }
-      
-      setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 300);
-    ")
   })
   
   filtros_retorno <- filtrosServer(id = "filtros_app", dados_brutos = projetos)

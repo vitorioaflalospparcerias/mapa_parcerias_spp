@@ -1,4 +1,4 @@
-  # --- FUNÇÃO HELPER: Cria os filtros sanfonados (Dropdowns) com SVG Nativo ---
+# --- FUNÇÃO HELPER: Cria os filtros sanfonados (Dropdowns) com SVG Nativo ---
 criar_filtro_sanfona <- function(titulo, input_obj, is_open = FALSE) {
   display_style <- if(is_open) "display: block;" else "display: none;"
   chevron_class <- if(is_open) "chevron-icon open" else "chevron-icon"
@@ -31,7 +31,6 @@ filtrosUI <- function(id) {
   ns <- NS(id)
   
   tagList(
-    # Botão de fechar (X)
     tags$button(
       id = ns("btn_close"),
       type = "button",
@@ -39,19 +38,14 @@ filtrosUI <- function(id) {
       icon("times")
     ),
     
-    # Toggle Pílula
     div(class = "pill-toggle-container",
         actionButton(ns("tab_btn_filtros"), HTML("<i class='fa fa-sliders-h'></i> Filtros"), class = "pill-btn active"),
         actionButton(ns("tab_btn_downloads"), HTML("<i class='fa fa-download'></i> Downloads"), class = "pill-btn")
     ),
     
-    # ==========================================
-    # ABA 1: FILTROS
-    # ==========================================
     div(id = ns("tab_content_filtros"),
         tags$h4("Filtros", class = "section-title"),
         
-        # Filtros Sanfonados (Usando label = NULL para não repetir o título)
         criar_filtro_sanfona("Zona", selectizeInput(ns("filtro_zona"), NULL, choices = NULL, multiple = TRUE, options = list(placeholder = 'Todos', plugins = list('remove_button')))),
         criar_filtro_sanfona("Distritos", selectizeInput(ns("filtro_distrito"), NULL, choices = NULL, multiple = TRUE, options = list(placeholder = 'Todos', plugins = list('remove_button')))),
         criar_filtro_sanfona("Parceria", selectizeInput(ns("filtro_lote"), NULL, choices = NULL, multiple = TRUE, options = list(placeholder = 'Todos', plugins = list('remove_button')))),
@@ -88,9 +82,6 @@ filtrosUI <- function(id) {
         )
     ),
     
-    # ==========================================
-    # ABA 2: DOWNLOADS
-    # ==========================================
     shinyjs::hidden(
       div(id = ns("tab_content_downloads"),
           tags$h4("Arquivos disponíveis", class = "section-title"),
@@ -140,6 +131,26 @@ filtrosServer <- function(id, dados_brutos) {
       }
     }, ignoreNULL = FALSE)
     
+    # --- Leitura da URL para inicialização de estado ---
+    query <- parseQueryString(isolate(session$clientData$url_search))
+    parse_param <- function(param) {
+      if (is.null(param)) return(NULL)
+      unlist(strsplit(URLdecode(param), "\\|\\|"))
+    }
+    
+    p_zona <- parse_param(query$zona)
+    p_distrito <- parse_param(query$distrito)
+    p_lote <- parse_param(query$lote)
+    p_nome <- parse_param(query$nome)
+    p_modal <- parse_param(query$modalidade)
+    p_conced <- parse_param(query$concedente)
+    
+    observe({
+      if (!is.null(query$cor)) updateRadioButtons(session, "radio_cor_pin", selected = query$cor)
+      if (!is.null(query$pins)) updateCheckboxInput(session, "check_exibir_pins", value = as.logical(query$pins))
+    })
+    
+    # --- Reativos de Filtro Cruzado ---
     get_choices <- function(column) { c("Todos" = "Todos", sort(unique(na.omit(column)))) }
     
     data_para_zona <- reactive({
@@ -202,25 +213,32 @@ filtrosServer <- function(id, dados_brutos) {
       df
     })
     
-    update_choices <- function(input_id, new_choices, current_selection) {
-      if (is.null(current_selection) || length(current_selection) == 0) {
-        selected_val <- "Todos"
-      } else if (length(current_selection) > 1 && "Todos" %in% current_selection) {
-        selected_val <- setdiff(current_selection, "Todos")
-      } else if (!all(current_selection %in% new_choices) && !"Todos" %in% current_selection) {
-        selected_val <- "Todos"
-      } else {
-        selected_val <- current_selection
+    # Lógica que decide o valor inicial (da URL ou "Todos")
+    get_initial_selection <- function(current_sel, new_choices, url_param) {
+      if (is.null(current_sel) || length(current_sel) == 0) {
+        if (!is.null(url_param) && all(url_param %in% new_choices)) { return(url_param) }
+        return("Todos")
       }
+      if (length(current_sel) > 1 && "Todos" %in% current_sel) {
+        return(setdiff(current_sel, "Todos"))
+      } else if (!all(current_sel %in% new_choices) && !"Todos" %in% current_sel) {
+        return("Todos")
+      } else {
+        return(current_sel)
+      }
+    }
+    
+    update_choices <- function(input_id, new_choices, current_selection, url_param) {
+      selected_val <- get_initial_selection(current_selection, new_choices, url_param)
       updateSelectizeInput(session, input_id, choices = new_choices, selected = selected_val)
     }
     
-    observe({ update_choices("filtro_zona", get_choices(data_para_zona()$zona), input$filtro_zona) })
-    observe({ update_choices("filtro_distrito", get_choices(data_para_distrito()$NM_DIST), input$filtro_distrito) })
-    observe({ update_choices("filtro_lote", get_choices(data_para_lote()$lote), input$filtro_lote) })
-    observe({ update_choices("filtro_nome", get_choices(data_para_nome()$ppp_nome), input$filtro_nome) })
-    observe({ update_choices("filtro_modalidade", get_choices(data_para_modalidade()$ppp_modali), input$filtro_modalidade) })
-    observe({ update_choices("filtro_concedente", get_choices(data_para_concedente()$ppp_conced), input$filtro_concedente) })
+    observe({ update_choices("filtro_zona", get_choices(data_para_zona()$zona), input$filtro_zona, p_zona) })
+    observe({ update_choices("filtro_distrito", get_choices(data_para_distrito()$NM_DIST), input$filtro_distrito, p_distrito) })
+    observe({ update_choices("filtro_lote", get_choices(data_para_lote()$lote), input$filtro_lote, p_lote) })
+    observe({ update_choices("filtro_nome", get_choices(data_para_nome()$ppp_nome), input$filtro_nome, p_nome) })
+    observe({ update_choices("filtro_modalidade", get_choices(data_para_modalidade()$ppp_modali), input$filtro_modalidade, p_modal) })
+    observe({ update_choices("filtro_concedente", get_choices(data_para_concedente()$ppp_conced), input$filtro_concedente, p_conced) })
     
     reset_trigger <- reactiveVal(0)
     

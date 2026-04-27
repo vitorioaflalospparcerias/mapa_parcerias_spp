@@ -22,6 +22,12 @@ input, button, select, textarea, .btn, .form-check-label, h1, h2, h3, h4, h5, h6
 body.widescreen-mode .custom-title-panel { display: none !important; }
 body.widescreen-mode .main-content-wrapper { padding: 0 !important; }
 body.widescreen-mode .map-column { border-radius: 0 !important; }
+body.widescreen-mode #floating_triggers,
+body.widescreen-mode #painel_wrapper,
+body.widescreen-mode #floating_triggers_right,
+body.widescreen-mode #painel_wrapper_right {
+  display: none !important;
+}
 
 .btn-fullscreen {
   position: absolute;
@@ -44,6 +50,7 @@ body.widescreen-mode .map-column { border-radius: 0 !important; }
 }
 .btn-fullscreen:hover { background: #f4f4f4; color: #F08200; }
 
+/* Legenda, Filtros e outros estilos permanecem iguais ao seu original */
 .floating-triggers, .floating-triggers-right {
   position: absolute;
   top: 10px;
@@ -169,9 +176,6 @@ body.widescreen-mode .map-column { border-radius: 0 !important; }
 .title-center h1 { margin: 0; font-size: 24px; font-weight: 600; color: #FFFFFF; line-height: 100%; } 
 .title-left img { margin-right: 15px; }
 
-/* =========================================================
-   ESTILIZAÇÃO DO POP-UP DO MAPA (LEAFLET)
-   ========================================================= */
 .leaflet-container { font-family: 'Fira Sans', sans-serif !important; }
 
 .leaflet-popup-content-wrapper {
