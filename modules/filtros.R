@@ -3,7 +3,6 @@ criar_filtro_sanfona <- function(titulo, input_obj, is_open = FALSE) {
   display_style <- if(is_open) "display: block;" else "display: none;"
   chevron_class <- if(is_open) "chevron-icon open" else "chevron-icon"
   
-  # Construção do ícone SVG idêntico ao Figma (círculo cinza + chevron)
   svg_icon <- HTML(paste0('
     <svg class="', chevron_class, '" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10" stroke="#b0b0b0"></circle>
@@ -150,68 +149,27 @@ filtrosServer <- function(id, dados_brutos) {
       if (!is.null(query$pins)) updateCheckboxInput(session, "check_exibir_pins", value = as.logical(query$pins))
     })
     
-    # --- Reativos de Filtro Cruzado ---
+    # --- Reativos de Filtro Cruzado (DRY) ---
     get_choices <- function(column) { c("Todos" = "Todos", sort(unique(na.omit(column)))) }
     
-    data_para_zona <- reactive({
+    filtrar_dados <- function(ignorar = "nenhum") {
       df <- dados_brutos
-      if (!is.null(input$filtro_distrito) && !"Todos" %in% input$filtro_distrito) { df <- df |> filter(NM_DIST %in% input$filtro_distrito) }
-      if (!is.null(input$filtro_lote) && !"Todos" %in% input$filtro_lote) { df <- df |> filter(lote %in% input$filtro_lote) }
-      if (!is.null(input$filtro_nome) && !"Todos" %in% input$filtro_nome) { df <- df |> filter(ppp_nome %in% input$filtro_nome) }
-      if (!is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) { df <- df |> filter(ppp_modali %in% input$filtro_modalidade) }
-      if (!is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) { df <- df |> filter(ppp_conced %in% input$filtro_concedente) }
-      df
-    })
+      if (ignorar != "zona"       && !is.null(input$filtro_zona)       && !"Todos" %in% input$filtro_zona)       df <- df |> filter(zona %in% input$filtro_zona)
+      if (ignorar != "distrito"   && !is.null(input$filtro_distrito)   && !"Todos" %in% input$filtro_distrito)   df <- df |> filter(NM_DIST %in% input$filtro_distrito)
+      if (ignorar != "lote"       && !is.null(input$filtro_lote)       && !"Todos" %in% input$filtro_lote)       df <- df |> filter(lote %in% input$filtro_lote)
+      if (ignorar != "nome"       && !is.null(input$filtro_nome)       && !"Todos" %in% input$filtro_nome)       df <- df |> filter(ppp_nome %in% input$filtro_nome)
+      if (ignorar != "modalidade" && !is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) df <- df |> filter(ppp_modali %in% input$filtro_modalidade)
+      if (ignorar != "concedente" && !is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) df <- df |> filter(ppp_conced %in% input$filtro_concedente)
+      return(df)
+    }
     
-    data_para_distrito <- reactive({
-      df <- dados_brutos
-      if (!is.null(input$filtro_zona) && !"Todos" %in% input$filtro_zona) { df <- df |> filter(zona %in% input$filtro_zona) }
-      if (!is.null(input$filtro_lote) && !"Todos" %in% input$filtro_lote) { df <- df |> filter(lote %in% input$filtro_lote) }
-      if (!is.null(input$filtro_nome) && !"Todos" %in% input$filtro_nome) { df <- df |> filter(ppp_nome %in% input$filtro_nome) }
-      if (!is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) { df <- df |> filter(ppp_modali %in% input$filtro_modalidade) }
-      if (!is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) { df <- df |> filter(ppp_conced %in% input$filtro_concedente) }
-      df
-    })
-    
-    data_para_lote <- reactive({
-      df <- dados_brutos
-      if (!is.null(input$filtro_zona) && !"Todos" %in% input$filtro_zona) { df <- df |> filter(zona %in% input$filtro_zona) }
-      if (!is.null(input$filtro_distrito) && !"Todos" %in% input$filtro_distrito) { df <- df |> filter(NM_DIST %in% input$filtro_distrito) }
-      if (!is.null(input$filtro_nome) && !"Todos" %in% input$filtro_nome) { df <- df |> filter(ppp_nome %in% input$filtro_nome) }
-      if (!is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) { df <- df |> filter(ppp_modali %in% input$filtro_modalidade) }
-      if (!is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) { df <- df |> filter(ppp_conced %in% input$filtro_concedente) }
-      df
-    })
-    
-    data_para_nome <- reactive({
-      df <- dados_brutos
-      if (!is.null(input$filtro_zona) && !"Todos" %in% input$filtro_zona) { df <- df |> filter(zona %in% input$filtro_zona) }
-      if (!is.null(input$filtro_distrito) && !"Todos" %in% input$filtro_distrito) { df <- df |> filter(NM_DIST %in% input$filtro_distrito) }
-      if (!is.null(input$filtro_lote) && !"Todos" %in% input$filtro_lote) { df <- df |> filter(lote %in% input$filtro_lote) }
-      if (!is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) { df <- df |> filter(ppp_modali %in% input$filtro_modalidade) }
-      if (!is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) { df <- df |> filter(ppp_conced %in% input$filtro_concedente) }
-      df
-    })
-    
-    data_para_modalidade <- reactive({
-      df <- dados_brutos
-      if (!is.null(input$filtro_zona) && !"Todos" %in% input$filtro_zona) { df <- df |> filter(zona %in% input$filtro_zona) }
-      if (!is.null(input$filtro_distrito) && !"Todos" %in% input$filtro_distrito) { df <- df |> filter(NM_DIST %in% input$filtro_distrito) }
-      if (!is.null(input$filtro_lote) && !"Todos" %in% input$filtro_lote) { df <- df |> filter(lote %in% input$filtro_lote) }
-      if (!is.null(input$filtro_nome) && !"Todos" %in% input$filtro_nome) { df <- df |> filter(ppp_nome %in% input$filtro_nome) }
-      if (!is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) { df <- df |> filter(ppp_conced %in% input$filtro_concedente) }
-      df
-    })
-    
-    data_para_concedente <- reactive({
-      df <- dados_brutos
-      if (!is.null(input$filtro_zona) && !"Todos" %in% input$filtro_zona) { df <- df |> filter(zona %in% input$filtro_zona) }
-      if (!is.null(input$filtro_distrito) && !"Todos" %in% input$filtro_distrito) { df <- df |> filter(NM_DIST %in% input$filtro_distrito) }
-      if (!is.null(input$filtro_lote) && !"Todos" %in% input$filtro_lote) { df <- df |> filter(lote %in% input$filtro_lote) }
-      if (!is.null(input$filtro_nome) && !"Todos" %in% input$filtro_nome) { df <- df |> filter(ppp_nome %in% input$filtro_nome) }
-      if (!is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) { df <- df |> filter(ppp_modali %in% input$filtro_modalidade) }
-      df
-    })
+    data_para_zona <- reactive({ filtrar_dados("zona") })
+    data_para_distrito <- reactive({ filtrar_dados("distrito") })
+    data_para_lote <- reactive({ filtrar_dados("lote") })
+    data_para_nome <- reactive({ filtrar_dados("nome") })
+    data_para_modalidade <- reactive({ filtrar_dados("modalidade") })
+    data_para_concedente <- reactive({ filtrar_dados("concedente") })
+    dados_filtrados_reativos <- reactive({ filtrar_dados("nenhum") })
     
     # Lógica que decide o valor inicial (da URL ou "Todos")
     get_initial_selection <- function(current_sel, new_choices, url_param) {
@@ -252,23 +210,19 @@ filtrosServer <- function(id, dados_brutos) {
       reset_trigger(reset_trigger() + 1)
     })
     
-    dados_filtrados_reativos <- reactive({
-      dados_filtrados <- dados_brutos
-      if (!is.null(input$filtro_zona) && !"Todos" %in% input$filtro_zona) { dados_filtrados <- dados_filtrados |> filter(zona %in% input$filtro_zona) }
-      if (!is.null(input$filtro_distrito) && !"Todos" %in% input$filtro_distrito) { dados_filtrados <- dados_filtrados |> filter(NM_DIST %in% input$filtro_distrito) }
-      if (!is.null(input$filtro_lote) && !"Todos" %in% input$filtro_lote) { dados_filtrados <- dados_filtrados |> filter(lote %in% input$filtro_lote) }
-      if (!is.null(input$filtro_modalidade) && !"Todos" %in% input$filtro_modalidade) { dados_filtrados <- dados_filtrados |> filter(ppp_modali %in% input$filtro_modalidade) }
-      if (!is.null(input$filtro_concedente) && !"Todos" %in% input$filtro_concedente) { dados_filtrados <- dados_filtrados |> filter(ppp_conced %in% input$filtro_concedente) }
-      if (!is.null(input$filtro_nome) && !"Todos" %in% input$filtro_nome) { dados_filtrados <- dados_filtrados |> filter(ppp_nome %in% input$filtro_nome) }
-      return(dados_filtrados)
-    })
-    
     output$download_dados <- downloadHandler(
       filename = function() { paste0("dados_filtrados_", Sys.Date(), ".xlsx") },
       content = function(file) {
         dados_para_salvar <- dados_filtrados_reativos() |>
           sf::st_drop_geometry() |>
-          select(Equipamento = ppp_nome, Modalidade = ppp_modali, `Poder Concedente` = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, `Área (m2)` = ppp_area, `Investimento (R$)` = ppp_invest, `Concessionária` = ppp_conces, `Contrato` = ppp_contra, `Ano Assinatura` = ppp_assina, `Link` = ppp_link1)
+          mutate(
+            `Investimento Previsto` = case_when(
+              (is.na(ppp_invest) | ppp_invest == 0) & (is.na(ppp_modali) | ppp_modali != "Parceria público-privada (PPP)") ~ "Não se aplica",
+              is.na(ppp_invest) ~ NA_character_,
+              TRUE ~ format(ppp_invest, scientific = FALSE, trim = TRUE)
+            )
+          ) |>
+          select(Equipamento = ppp_nome, Modalidade = ppp_modali, `Poder Concedente` = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, `Área (m2)` = ppp_area, `Investimento Previsto`, `Concessionária` = ppp_conces, `Contrato` = ppp_contra, `Ano Assinatura` = ppp_assina, `Link` = ppp_link1)
         writexl::write_xlsx(dados_para_salvar, file)
       }
     )
@@ -282,8 +236,15 @@ filtrosServer <- function(id, dados_brutos) {
         dir.create(shp_dir)
         
         dados_espaciais <- dados_filtrados_reativos() |>
+          mutate(
+            ppp_invest_export = case_when(
+              (is.na(ppp_invest) | ppp_invest == 0) & (is.na(ppp_modali) | ppp_modali != "Parceria público-privada (PPP)") ~ "Não se aplica",
+              is.na(ppp_invest) ~ NA_character_,
+              TRUE ~ format(ppp_invest, scientific = FALSE, trim = TRUE)
+            )
+          ) |>
           select(
-            Equipament = ppp_nome, Modalidade = ppp_modali, Concedente = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, Area_m2 = ppp_area, Invest = ppp_invest, Concession = ppp_conces, Contrato = ppp_contra, Ano_Assina = ppp_assina, Link = ppp_link1
+            Equipament = ppp_nome, Modalidade = ppp_modali, Concedente = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, Area_m2 = ppp_area, InvPrev = ppp_invest_export, Concession = ppp_conces, Contrato = ppp_contra, Ano_Assina = ppp_assina, Link = ppp_link1
           )
         
         caminho_shp <- file.path(shp_dir, "parcerias.shp")
@@ -296,6 +257,21 @@ filtrosServer <- function(id, dados_brutos) {
       contentType = "application/zip"
     )
     
-    return(list(dados_filtrados = dados_filtrados_reativos, exibir_pins = reactive({ input$check_exibir_pins }), categorizar_cor = reactive({ input$radio_cor_pin }), reset_trigger = reset_trigger))
+    return(list(
+      dados_filtrados = dados_filtrados_reativos, 
+      exibir_pins = reactive({ input$check_exibir_pins }), 
+      categorizar_cor = reactive({ input$radio_cor_pin }), 
+      reset_trigger = reset_trigger,
+      selecoes = reactive({
+        list(
+          zona = input$filtro_zona,
+          distrito = input$filtro_distrito,
+          lote = input$filtro_lote,
+          nome = input$filtro_nome,
+          modalidade = input$filtro_modalidade,
+          concedente = input$filtro_concedente
+        )
+      })
+    ))
   })
 }

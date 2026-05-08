@@ -51,7 +51,6 @@ mapaServer <- function(id, projetos_reativos, distritos_estaticos, distrito_sele
     observe({
       proxy <- leafletProxy("mapa_distritos")
       
-      # Limpa os grupos antigos E os clusters antes de desenhar novos
       proxy |> clearGroup("projetos") |> clearMarkerClusters() |> removeControl("legenda_pins_dinamica")
       req(isTRUE(exibir_pins()))
       
@@ -89,41 +88,21 @@ mapaServer <- function(id, projetos_reativos, distritos_estaticos, distrito_sele
           
           categorias_unicas <- sort(unique(dados_filtrados[[coluna_para_cor]]))
           
-          # Paleta de cores
-          cores_validas <- c('orange', 'darkblue', 'cadetblue', 'darkred', 'purple', 'green', 'lightred', 'lightblue', 'darkgreen', 'pink', 'beige', 'gray')
+          mapa_nomes <- setNames(rep_len(CORES_VALIDAS, length.out = length(categorias_unicas)), categorias_unicas)
+          mapa_hex <- setNames(CORES_HEX[mapa_nomes], categorias_unicas)
           
-          cores_hex <- c(
-            'orange' = '#F08200',      
-            'darkblue' = '#023047',    
-            'cadetblue' = '#436978',   
-            'darkred' = '#A23336',     
-            'purple' = '#8E44AD',      
-            'green' = '#27AE60',       
-            'lightred' = '#E74C3C',    
-            'lightblue' = '#3498DB',   
-            'darkgreen' = '#1E8449',   
-            'pink' = '#D252B9',        
-            'beige' = '#F39C12',       
-            'gray' = '#7F8C8D'         
-          )
-          
-          mapa_nomes <- setNames(rep_len(cores_validas, length.out = length(categorias_unicas)), categorias_unicas)
-          mapa_hex <- setNames(cores_hex[mapa_nomes], categorias_unicas)
-          
-          # <-- SOLUÇÃO 2: Vetorização (Eliminação do Loop 'for')
-          # Cria um vetor com a cor exata para cada linha do dataframe de uma só vez
           vetor_cores_marcadores <- unname(mapa_nomes[as.character(dados_filtrados[[coluna_para_cor]])])
           
           proxy |>
             addAwesomeMarkers(
               data = dados_filtrados,
               group = "projetos",
-              clusterOptions = markerClusterOptions(), # <-- SOLUÇÃO 3: Clusterização ativada
+              clusterOptions = markerClusterOptions(), 
               popup = ~lapply(label_html, HTML), 
               icon = awesomeIcons(
                 icon = 'info-sign',
                 library = 'glyphicon',
-                markerColor = vetor_cores_marcadores, # Aplica todas as cores instantaneamente
+                markerColor = vetor_cores_marcadores,
                 iconColor = '#FFFFFF'
               )
             ) |>

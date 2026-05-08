@@ -87,6 +87,18 @@ projetos <- projetos %>%
     label_html = pmap_chr(
       list(ppp_nome, ppp_modali, ppp_conced, ppp_conces, ppp_assina, ppp_contra, ppp_invest, ppp_area, ppp_link1),
       function(nome, modali, conced, conces, assina, contra, invest, area, link1) {
+        
+        is_ppp <- !is.na(modali) && modali == "Parceria público-privada (PPP)"
+        invest_vazio <- is.na(invest) || invest == 0
+        
+        invest_str <- if (invest_vazio && !is_ppp) {
+          "<strong>Investimento Previsto:</strong> Não se aplica"
+        } else if (!is.na(invest)) {
+          sprintf("<strong>Investimento Previsto (R$):</strong> %s", format(invest, big.mark = ".", decimal.mark = ",", nsmall = 2))
+        } else {
+          NULL
+        }
+        
         info_lista <- list(
           sprintf("<strong>PPP:</strong> %s", nome),
           if (!is.na(modali) && modali != "") sprintf("<strong>Modalidade:</strong> %s", modali) else NULL,
@@ -94,7 +106,7 @@ projetos <- projetos %>%
           if (!is.na(conces) && conces != "") sprintf("<strong>Parceiro:</strong> %s", conces) else NULL,
           if (!is.na(assina) && assina != "") sprintf("<strong>Ano de Assinatura:</strong> %s", assina) else NULL,
           if (!is.na(contra) && contra != "") sprintf("<strong>Contrato:</strong> %s", contra) else NULL,
-          if (!is.na(invest)) sprintf("<strong>Investimento (R$):</strong> %s", format(invest, big.mark = ".", decimal.mark = ",", nsmall = 2)) else NULL,
+          invest_str,
           if (!is.na(area)) sprintf("<strong>Área (m²):</strong> %s", format(area, big.mark = ".", decimal.mark = ",", nsmall = 0)) else NULL,
           if (!is.na(link1) && link1 != "") sprintf("<strong>Link:</strong> <a href='%s' target='_blank'>Saiba Mais</a>", link1) else NULL
         )

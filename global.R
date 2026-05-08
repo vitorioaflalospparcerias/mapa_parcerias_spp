@@ -17,6 +17,15 @@ library(stringr)
 library(writexl)
 library(zip)
 
+# --- CONFIGURAÇÕES ESTÁTICAS ---
+CORES_VALIDAS <- c('orange', 'darkblue', 'cadetblue', 'darkred', 'purple', 'green', 'lightred', 'lightblue', 'darkgreen', 'pink', 'beige', 'gray')
+CORES_HEX <- c(
+  'orange' = '#F08200', 'darkblue' = '#023047', 'cadetblue' = '#436978', 
+  'darkred' = '#A23336', 'purple' = '#8E44AD', 'green' = '#27AE60', 
+  'lightred' = '#E74C3C', 'lightblue' = '#3498DB', 'darkgreen' = '#1E8449', 
+  'pink' = '#D252B9', 'beige' = '#F39C12', 'gray' = '#7F8C8D'
+)
+
 # --- CARREGAR MÓDULOS ---
 source("modules/mapa.R")
 source("modules/filtros.R")

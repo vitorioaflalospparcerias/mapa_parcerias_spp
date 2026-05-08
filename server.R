@@ -4,6 +4,11 @@
 
 server <- function(input, output, session) {
   
+  # Inicialização de Módulos
+  filtros_retorno <- filtrosServer(id = "filtros_app", dados_brutos = projetos)
+  projetos_filtrados <- filtros_retorno$dados_filtrados
+  
+  # Construção da URL e abertura da nova aba
   observeEvent(input$btn_fullscreen, {
     url <- "?fullscreen=1"
     
@@ -15,19 +20,22 @@ server <- function(input, output, session) {
       return(u)
     }
     
-    url <- add_param(url, "zona", input[["filtros_app-filtro_zona"]])
-    url <- add_param(url, "distrito", input[["filtros_app-filtro_distrito"]])
-    url <- add_param(url, "lote", input[["filtros_app-filtro_lote"]])
-    url <- add_param(url, "nome", input[["filtros_app-filtro_nome"]])
-    url <- add_param(url, "modalidade", input[["filtros_app-filtro_modalidade"]])
-    url <- add_param(url, "concedente", input[["filtros_app-filtro_concedente"]])
+    sel <- filtros_retorno$selecoes()
     
-    url <- paste0(url, "&cor=", input[["filtros_app-radio_cor_pin"]])
-    url <- paste0(url, "&pins=", as.character(input[["filtros_app-check_exibir_pins"]]))
+    url <- add_param(url, "zona", sel$zona)
+    url <- add_param(url, "distrito", sel$distrito)
+    url <- add_param(url, "lote", sel$lote)
+    url <- add_param(url, "nome", sel$nome)
+    url <- add_param(url, "modalidade", sel$modalidade)
+    url <- add_param(url, "concedente", sel$concedente)
+    
+    url <- paste0(url, "&cor=", filtros_retorno$categorizar_cor())
+    url <- paste0(url, "&pins=", as.character(filtros_retorno$exibir_pins()))
     
     shinyjs::runjs(paste0("window.open('", url, "', '_blank');"))
   })
   
+  # Lógica de tela cheia na própria aba
   observeEvent(input$btn_expand, {
     shinyjs::toggleClass(selector = "body", class = "widescreen-mode")
     
@@ -43,6 +51,7 @@ server <- function(input, output, session) {
     ")
   })
   
+  # Controle de abertura de menus
   observeEvent(input$btn_open_filtros, {
     shinyjs::hide("floating_triggers")
     shinyjs::show("painel_wrapper")    
@@ -77,12 +86,9 @@ server <- function(input, output, session) {
     shinyjs::show("floating_triggers_right")  
   })
   
-  filtros_retorno <- filtrosServer(id = "filtros_app", dados_brutos = projetos)
-  projetos_filtrados <- filtros_retorno$dados_filtrados
-  
-  distrito_selecionado_reativo <- reactive({ input[["filtros_app-filtro_distrito"]] })
-  projeto_selecionado_reativo <- reactive({ input[["filtros_app-filtro_nome"]] })
-  lote_selecionado_reativo <- reactive({ input[["filtros_app-filtro_lote"]] })
+  distrito_selecionado_reativo <- reactive({ if (is.null(filtros_retorno$selecoes()$distrito)) "Todos" else filtros_retorno$selecoes()$distrito })
+  projeto_selecionado_reativo <- reactive({ if (is.null(filtros_retorno$selecoes()$nome)) "Todos" else filtros_retorno$selecoes()$nome })
+  lote_selecionado_reativo <- reactive({ if (is.null(filtros_retorno$selecoes()$lote)) "Todos" else filtros_retorno$selecoes()$lote })
   
   mapaServer(
     id = "mapa",
