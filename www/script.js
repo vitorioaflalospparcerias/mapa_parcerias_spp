@@ -1,11 +1,4 @@
-// Ping para manter o app ativo
-var keepAlive = setInterval(function() {
-  if (typeof Shiny !== 'undefined') {
-    Shiny.onInputChange('keep_alive_ping', Math.random());
-  }
-}, 10000);
 
-// SCRIPT DE POSICIONAMENTO DINÂMICO
 $(document).ready(function() {
   const panelRight = document.getElementById('painel_wrapper_right');
   const wsBtn = document.getElementById('btn_fullscreen');
@@ -25,8 +18,8 @@ $(document).ready(function() {
   
   const mutObserver = new MutationObserver(updateWsBtn);
   mutObserver.observe(panelRight, { attributes: true, attributeFilter: ['style'] });
-  
-  // REPOSICIONAMENTO DA LEGENDA DO MAPA (SEM LOOP)
+
+
   const panelLeft = document.getElementById('painel_wrapper');
 
   function updateLegendPos() {

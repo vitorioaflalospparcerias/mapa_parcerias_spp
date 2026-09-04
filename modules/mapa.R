@@ -47,7 +47,6 @@ mapaServer <- function(id, projetos_reativos, distritos_estaticos, distrito_sele
         }")
     })
     
-    # --- LÓGICA DE DESENHO DOS PINS ---
     observe({
       proxy <- leafletProxy("mapa_distritos")
       

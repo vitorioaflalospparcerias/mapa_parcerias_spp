@@ -1,4 +1,4 @@
-# --- FUNÇÃO HELPER: Cria os filtros sanfonados (Dropdowns) com SVG Nativo ---
+
 criar_filtro_sanfona <- function(titulo, input_obj, is_open = FALSE) {
   display_style <- if(is_open) "display: block;" else "display: none;"
   chevron_class <- if(is_open) "chevron-icon open" else "chevron-icon"
@@ -215,14 +215,7 @@ filtrosServer <- function(id, dados_brutos) {
       content = function(file) {
         dados_para_salvar <- dados_filtrados_reativos() |>
           sf::st_drop_geometry() |>
-          mutate(
-            `Investimento Previsto` = case_when(
-              (is.na(ppp_invest) | ppp_invest == 0) & (is.na(ppp_modali) | ppp_modali != "Parceria público-privada (PPP)") ~ "Não se aplica",
-              is.na(ppp_invest) ~ NA_character_,
-              TRUE ~ format(ppp_invest, scientific = FALSE, trim = TRUE)
-            )
-          ) |>
-          select(Equipamento = ppp_nome, Modalidade = ppp_modali, `Poder Concedente` = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, `Área (m2)` = ppp_area, `Investimento Previsto`, `Concessionária` = ppp_conces, `Contrato` = ppp_contra, `Ano Assinatura` = ppp_assina, `Link` = ppp_link1)
+          select(Equipamento = ppp_nome, Modalidade = ppp_modali, `Poder Concedente` = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, `Área (m2)` = ppp_area, `Concessionária` = ppp_conces, `Contrato` = ppp_contra, `Ano Assinatura` = ppp_assina, `Link` = ppp_link1)
         writexl::write_xlsx(dados_para_salvar, file)
       }
     )
@@ -236,15 +229,8 @@ filtrosServer <- function(id, dados_brutos) {
         dir.create(shp_dir)
         
         dados_espaciais <- dados_filtrados_reativos() |>
-          mutate(
-            ppp_invest_export = case_when(
-              (is.na(ppp_invest) | ppp_invest == 0) & (is.na(ppp_modali) | ppp_modali != "Parceria público-privada (PPP)") ~ "Não se aplica",
-              is.na(ppp_invest) ~ NA_character_,
-              TRUE ~ format(ppp_invest, scientific = FALSE, trim = TRUE)
-            )
-          ) |>
           select(
-            Equipament = ppp_nome, Modalidade = ppp_modali, Concedente = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, Area_m2 = ppp_area, InvPrev = ppp_invest_export, Concession = ppp_conces, Contrato = ppp_contra, Ano_Assina = ppp_assina, Link = ppp_link1
+            Equipament = ppp_nome, Modalidade = ppp_modali, Concedente = ppp_conced, Parceria = lote, Distrito = NM_DIST, Zona = zona, Area_m2 = ppp_area, Concession = ppp_conces, Contrato = ppp_contra, Ano_Assina = ppp_assina, Link = ppp_link1
           )
         
         caminho_shp <- file.path(shp_dir, "parcerias.shp")

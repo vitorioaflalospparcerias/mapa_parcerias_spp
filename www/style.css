@@ -218,9 +218,6 @@ body.widescreen-mode #painel_wrapper_right {
   background-color: transparent !important;
 }
 
-/* ===================================================================================
-   SOBRESCRITA DE CORES DOS AGRUPAMENTOS (CLUSTERS) DO LEAFLET
-   =================================================================================== */
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {

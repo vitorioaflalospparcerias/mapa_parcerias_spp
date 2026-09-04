@@ -110,7 +110,6 @@ graficosServer <- function(id, dados_filtrados) {
       contagem_com <- length(unique(na.omit(dados$NM_DIST)))
       contagem_sem <- 96 - contagem_com
       
-      # Ícone de tooltip padronizado para esta seção
       icone_tooltip <- bslib::tooltip(
         tags$span(icon("question-circle"), style = "color: #b0b0b0; font-size: 13px; cursor: help; margin-left: 4px;"), 
         tooltip_kpi_text, 
@@ -189,7 +188,7 @@ graficosServer <- function(id, dados_filtrados) {
     })
     
     # =========================================================================
-    # --- RENDERIZAÇÃO DOS GRÁFICOS (DEGRADÊ HEX DINÂMICO E CÓDIGO ESTÁVEL) ---
+    # --- RENDERIZAÇÃO DOS GRÁFICOS ---
     # =========================================================================
     
     gerar_paleta_laranja <- function(n_barras) {
